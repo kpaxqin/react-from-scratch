@@ -2,50 +2,69 @@ function isReactClass(type) {
   return type.prototype && type.prototype.isReactComponent;
 }
 
-function mountComposite(element) {
-  const { type, props } = element;
-  let renderedElement
-
-  if (isReactClass(type)) {
-    const publicInstance = new type(props);
-
-    renderedElement = publicInstance.render();
-  } else {
-    renderedElement = type(props);
+class CompositeComponent {
+  constructor(element) {
+    this.currentElement = element;
+    this.renderedComponent = null;
+    this.publicInstance = null;
   }
+  mount() {
+    const { type, props } = this.currentElement;
+    let renderedElement;
 
-  return mount(renderedElement)
+    if (isReactClass(type)) {
+      this.publicInstance = new type(props);
+
+      renderedElement = this.publicInstance.render();
+    } else {
+      renderedElement = type(props);
+    }
+
+    this.renderedComponent = instantiateComponent(renderedElement);
+    return this.renderedComponent.mount()
+  }
 }
 
-function mountHost(element) {
-  let node;
-  if (['string', 'number'].includes(typeof element)) {
-    node = document.createTextNode(element);
-  } else {
-    const { type, props : { children, ...attributes } } = element;
-
-    node = document.createElement(type);
-
-    Object.keys(attributes).forEach(k => {
-      node.setAttribute(k, attributes[k]);
-    });
-
-    children.forEach(child => {
-      const childNode = mount(child);
-      node.appendChild(childNode);
-    });
+class DOMComponent {
+  constructor(element) {
+    this.currentElement = element;
+    this.node = null;
+    this.renderedChildren = [];
   }
-  return node;
+  mount() {
+    const element = this.currentElement;
+    let node;
+    if (['string', 'number'].includes(typeof element)) {
+      node = document.createTextNode(element);
+    } else {
+      const { type, props : { children, ...attributes } } = element;
+
+      node = document.createElement(type);
+
+      Object.keys(attributes).forEach(k => {
+        node.setAttribute(k, attributes[k]);
+      });
+
+      children.forEach(child => {
+        const childComponent = instantiateComponent(child);
+        this.renderedChildren.push(childComponent)
+        node.appendChild(childComponent.mount());
+      });
+    }
+
+    this.node = node;
+    return this.node;
+  }
 }
 
 function isCompositeElement(element) {
   return typeof element === 'object' && typeof element.type === 'function';
 }
 
-function mount(element) {
+function instantiateComponent(element) {
   return isCompositeElement(element)
-    ? mountComposite(element)
-    : mountHost(element)
+    ? new CompositeComponent(element)
+    : new DOMComponent(element);
 }
 
 window.React = {
@@ -69,7 +88,7 @@ window.React = {
 
 window.ReactDOM = {
   render(element, container) {
-    const rootNode = mount(element);
+    const rootNode = instantiateComponent(element).mount();
     container.appendChild(rootNode);
   }
 };
