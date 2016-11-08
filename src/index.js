@@ -8,6 +8,9 @@ class CompositeComponent {
     this.renderedComponent = null;
     this.publicInstance = null;
   }
+  getPublicInstance() {
+    return this.publicInstance
+  }
   mount() {
     const { type, props } = this.currentElement;
     let renderedElement;
@@ -30,6 +33,9 @@ class DOMComponent {
     this.currentElement = element;
     this.node = null;
     this.renderedChildren = [];
+  }
+  getPublicInstance() {
+    return this.node;
   }
   mount() {
     const element = this.currentElement;
@@ -88,7 +94,8 @@ window.React = {
 
 window.ReactDOM = {
   render(element, container) {
-    const rootNode = instantiateComponent(element).mount();
-    container.appendChild(rootNode);
+    const rootComponent = instantiateComponent(element);
+    container.appendChild(rootComponent.mount());
+    return rootComponent.getPublicInstance();
   }
 };
