@@ -18,12 +18,18 @@ function getApp() {
       this.state = {
         count: 0
       }
-
-      setInterval(() => {
+    }
+    componentWillMount() {
+      this.timer = setInterval(() => {
+        const { count } = this.state;
+        console.log('Interval callback is running: ', count);
         this.setState({
-          count: this.state.count + 1
+          count: count + 1
         })
       }, 1000)
+    }
+    componentWillUnmount() {
+      window.clearInterval(this.timer);
     }
     render() {
       const { count } = this.state
