@@ -18,6 +18,12 @@ class CompositeComponent {
     if (isReactClass(type)) {
       this.publicInstance = new type(props);
 
+      const { componentWillMount } = this.publicInstance;
+
+      if (typeof componentWillMount === 'function') {
+        componentWillMount.call(this.publicInstance);
+      }
+
       renderedElement = this.publicInstance.render();
     } else {
       renderedElement = type(props);
