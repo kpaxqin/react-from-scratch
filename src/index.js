@@ -26,6 +26,12 @@ class CompositeComponent {
     this.renderedComponent = instantiateComponent(renderedElement);
     return this.renderedComponent.mount()
   }
+  unmount() {
+    if (this.publicInstance && this.publicInstance.componentWillUnmount) {
+      this.publicInstance.componentWillUnmount();
+    }
+    this.renderedComponent.unmount();
+  }
 }
 
 class DOMComponent {
@@ -61,6 +67,12 @@ class DOMComponent {
     this.node = node;
     return this.node;
   }
+  unmount() {
+    this.renderedChildren.forEach((childComponent) => {
+      childComponent.unmount()
+    })
+
+  }
 }
 
 function isCompositeElement(element) {
@@ -95,7 +107,14 @@ window.React = {
 window.ReactDOM = {
   render(element, container) {
     const rootComponent = instantiateComponent(element);
-    container.appendChild(rootComponent.mount());
+    const node = rootComponent.mount();
+    node._internalInstance = rootComponent;
+    container.appendChild(node);
     return rootComponent.getPublicInstance();
+  },
+  unmountComponentAtNode(container) {
+    const instance = container.firstChild._internalInstance;
+    instance.unmount();
+    container.innerHTML = '';
   }
 };
