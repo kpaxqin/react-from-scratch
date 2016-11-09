@@ -112,6 +112,10 @@ window.React = {
 
 window.ReactDOM = {
   render(element, container) {
+    if (container.firstChild) {
+      window.ReactDOM.unmountComponentAtNode(container);
+    }
+
     const rootComponent = instantiateComponent(element);
     const node = rootComponent.mount();
     node._internalInstance = rootComponent;
