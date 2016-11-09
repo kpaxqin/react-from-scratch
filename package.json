@@ -5,8 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "babel src/index.js -o dest/index.js -w -s",
-    "example:react": "rimraf example/react/dest && babel example/react -d example/react/dest",
-    "example:demo": "rimraf example/demo/dest && babel example/demo -d example/demo/dest",
+    "example": "rimraf example/demo/dest && babel example/demo -d example/demo/dest",
     "clean": "rimraf dest/**",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
