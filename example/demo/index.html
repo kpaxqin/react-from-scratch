@@ -6,7 +6,46 @@
 </head>
 <body>
 <div id="app"></div>
-<script src="../../dest/index.js"></script>
+<button id="unmount">Unmount</button>
 <script src="dest/index.js"></script>
+<script>
+    function loadScript(url) {
+        return new Promise(function(resolve, reject) {
+            var script = document.createElement('script');
+            script.defer = true;
+            script.onload = function () {
+                resolve();
+            };
+            script.onerror = function() {
+                reject();
+            }
+            document.head.appendChild(script);
+            script.src = url;
+        })
+    }
+
+    function loadReact(useNative) {
+        if (useNative) {
+            return loadScript('https://unpkg.com/react@15/dist/react.min.js')
+            .then(() => loadScript('https://unpkg.com/react-dom@15/dist/react-dom.min.js'))
+        } else {
+            return loadScript('../../dest/index.js');
+        }
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+
+    loadReact(urlParams.get('native')).then(() => {
+        const App = getApp();
+        const app = ReactDOM.render(
+            React.createElement(App),
+            document.getElementById('app')
+        );
+
+        document.getElementById('unmount').addEventListener('click', function() {
+            ReactDOM.unmountComponentAtNode(document.getElementById('app'))
+        });
+    });
+</script>
 </body>
 </html>
