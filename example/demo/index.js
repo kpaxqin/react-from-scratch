@@ -38,9 +38,16 @@ function getApp() {
       return (
         <div>
           <h1>Build your own React.js</h1>
-          <Counter
-            value={count}
-          />
+          <p>
+            Current prop is : {this.props.count}
+          </p>
+          <p>
+            Current state is :
+            <Counter
+              value={count}
+            />
+          </p>
+
         </div>
       )
     }
