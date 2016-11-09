@@ -16,10 +16,11 @@ function getApp() {
     constructor(props) {
       super(props)
       this.state = {
-        count: 0
+        count: this.props.count
       }
     }
     componentWillMount() {
+      console.log('componentWillMount')
       this.timer = setInterval(() => {
         const { count } = this.state;
         console.log('Interval callback is running: ', count);
@@ -29,6 +30,7 @@ function getApp() {
       }, 1000)
     }
     componentWillUnmount() {
+      console.log('componentWillUnmount')
       window.clearInterval(this.timer);
     }
     render() {

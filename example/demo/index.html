@@ -7,6 +7,8 @@
 <body>
 <div id="app"></div>
 <button id="unmount">Unmount</button>
+&nbsp;&nbsp;
+<button id="mount">mount</button>
 <script src="dest/index.js"></script>
 <script>
     function loadScript(url) {
@@ -37,13 +39,22 @@
 
     loadReact(urlParams.get('native')).then(() => {
         const App = getApp();
-        const app = ReactDOM.render(
-            React.createElement(App),
-            document.getElementById('app')
-        );
+        const app = mount(App);
+
+        function mount(App) {
+            const randomCount = parseInt(Math.random() * 100);
+            return ReactDOM.render(
+                    React.createElement(App, {count: randomCount}),
+                    document.getElementById('app')
+            );
+        }
 
         document.getElementById('unmount').addEventListener('click', function() {
             ReactDOM.unmountComponentAtNode(document.getElementById('app'))
+        });
+
+        document.getElementById('mount').addEventListener('click', function() {
+            mount(App);
         });
     });
 </script>
