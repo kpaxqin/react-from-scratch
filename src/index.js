@@ -11,6 +11,42 @@ class CompositeComponent {
   getPublicInstance() {
     return this.publicInstance
   }
+  getHostNode() {
+    return this.renderedComponent.getHostNode();
+  }
+  receive(nextElement) {
+    const { type, props: nextProps } = nextElement;
+
+    const previousElement = this.currentElement;
+    const previousComponent = this.renderedComponent;
+    const previousRenderedElement = previousComponent.currentElement;
+
+    let nextRenderedElement;
+    if (isReactClass(type)) {
+      const { componentWillUpdate } = this.publicInstance;
+
+      if (typeof componentWillUpdate === 'function') {
+        componentWillUpdate.call(this.publicInstance, this.currentElement.props);
+      }
+
+      this.publicInstance.props = nextProps;
+      nextRenderedElement = this.publicInstance.render();
+    } else {
+      nextRenderedElement = type(nextProps);
+    }
+
+    if (nextRenderedElement.type === previousRenderedElement.type) {
+      previousComponent.receive(nextRenderedElement)
+    } else {
+      this.renderedComponent = instantiateComponent(nextRenderedElement);
+      const nextHostNode = this.renderedComponent.mount();
+
+      const previousHostNode = previousComponent.getHostNode();
+      previousComponent.unmount();
+
+      previousHostNode.parentNode.replaceChild(nextHostNode, previousHostNode)
+    }
+  }
   mount() {
     const { type, props } = this.currentElement;
     let renderedElement;
@@ -47,6 +83,9 @@ class DOMComponent {
     this.renderedChildren = [];
   }
   getPublicInstance() {
+    return this.node;
+  }
+  getHostNode() {
     return this.node;
   }
   mount() {
