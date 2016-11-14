@@ -17,7 +17,6 @@ class CompositeComponent {
   receive(nextElement) {
     const { type, props: nextProps } = nextElement;
 
-    const previousElement = this.currentElement;
     const previousComponent = this.renderedComponent;
     const previousRenderedElement = previousComponent.currentElement;
 
@@ -88,10 +87,63 @@ class DOMComponent {
   getHostNode() {
     return this.node;
   }
+  receive(nextElement) {
+    const { props: nextProps } = nextElement;
+    const { props: previousProps } = this.currentElement;
+    const node = this.node;
+
+    this.currentElement = nextElement;
+
+    Object.keys(previousProps).forEach(function(prop) {
+      if (prop !== 'children' && previousProps.hasOwnProperty(prop)) {
+        node.removeAttribute(prop)
+      }
+    });
+
+    Object.keys(nextProps).forEach(function(prop) {
+      if (prop !== 'children' && previousProps.hasOwnProperty(prop)) {
+        node.setAttribute(prop, nextProps[prop])
+      }
+    });
+
+    const preChildrenElements = previousProps.children;
+    const nextChildrenElements = nextProps.children;
+
+    const previousRenderedChildren = this.renderedChildren
+    const nextRenderedChildren = []
+
+    nextChildrenElements.forEach((nextChildElement, index) => {
+      const preChildElement = preChildrenElements[index];
+      const needReplace = checkTextNodeElement(preChildElement) || (nextChildElement.type !== preChildElement.type);
+      if (!preChildElement) {//append new
+        const nextChildComponent = instantiateComponent(nextChildElement);
+        nextRenderedChildren.push(nextChildComponent);
+        node.appendChild(nextChildComponent.mount());
+      } else if (needReplace) {//replace
+        const nextChildComponent = instantiateComponent(nextChildElement);
+        nextRenderedChildren.push(nextChildComponent);
+        node.replaceChild(nextChildComponent.mount(), previousRenderedChildren[index].getHostNode());
+      } else {// recursive update
+        const previousRenderedComponent = previousRenderedChildren[index];
+        nextRenderedChildren.push(previousRenderedComponent);
+        previousRenderedComponent.receive(nextChildElement);
+      }
+    });
+
+    preChildrenElements.forEach((previousChildElement, index) => {
+      if (!nextChildrenElements[index]) {
+        node.removeChild(previousRenderedChildren[index].getHostNode());
+      }
+    });
+
+    this.renderedChildren = nextRenderedChildren;
+
+  }
   mount() {
     const element = this.currentElement;
+    const isTextNodeElement = checkTextNodeElement(element);
     let node;
-    if (['string', 'number'].includes(typeof element)) {
+    if (isTextNodeElement) {
       node = document.createTextNode(element);
     } else {
       const { type, props : { children, ...attributes } } = element;
@@ -118,6 +170,10 @@ class DOMComponent {
     })
 
   }
+}
+
+function checkTextNodeElement(element) {
+  return ['string', 'number'].indexOf(typeof element) !== -1;
 }
 
 function isCompositeElement(element) {
@@ -152,7 +208,9 @@ window.React = {
 window.ReactDOM = {
   render(element, container) {
     if (container.firstChild) {
-      window.ReactDOM.unmountComponentAtNode(container);
+      const instance = container.firstChild._internalInstance;
+      instance.receive(element);
+      return;
     }
 
     const rootComponent = instantiateComponent(element);
