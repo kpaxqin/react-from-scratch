@@ -52,6 +52,7 @@ class CompositeComponent {
 
     if (isReactClass(type)) {
       this.publicInstance = new type(props);
+      this.publicInstance._reactInternalInstance = this;
 
       const { componentWillMount } = this.publicInstance;
 
@@ -191,7 +192,15 @@ window.React = {
     constructor(props) {
       this.props = props;
     }
-    setState(){}
+    setState(nextState){
+      const reactComponent = this._reactInternalInstance;
+
+      this.state = Object.assign({}, this.state, nextState);
+
+      if (reactComponent) {
+        reactComponent.renderedComponent.receive(this.render())
+      }
+    }
     isReactComponent() {
       return true
     }
