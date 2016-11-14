@@ -41,10 +41,10 @@
         const App = getApp();
         const app = mount(App);
 
-        function mount(App) {
+        function mount(Component, props) {
             const randomCount = parseInt(Math.random() * 100);
             return ReactDOM.render(
-                    React.createElement(App, {count: randomCount}),
+                    React.createElement(Component, Object.assign({count: randomCount}, props)),
                     document.getElementById('app')
             );
         }
@@ -54,7 +54,7 @@
         });
 
         document.getElementById('mount').addEventListener('click', function() {
-            mount(App);
+            mount(App, {isUpdate: true});
         });
     });
 </script>

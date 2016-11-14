@@ -35,6 +35,7 @@ function getApp() {
     }
     render() {
       const { count } = this.state
+      const { isUpdate } = this.props;
       return (
         <div>
           <h1>Build your own React.js</h1>
@@ -43,9 +44,12 @@ function getApp() {
           </p>
           <p>
             Current state is :
-            <Counter
-              value={count}
-            />
+            {
+              isUpdate
+                ? 'prop has been updated!'
+                : (<Counter value={count} />)
+            }
+
           </p>
 
         </div>
