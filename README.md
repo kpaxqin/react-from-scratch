@@ -1,6 +1,6 @@
 # react-from-scratch
 
-不到250行代码实现的简单、可运行的"React.js"，帮助你简单理解React的实现原理。
+不到250行(without comments)代码实现的简单、可运行的"React.js"，帮助你简单理解React的实现原理。
 
 主要参照官方文档 [Implementation notes](https://facebook.github.io/react/contributing/implementation-notes.html)
 

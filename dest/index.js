@@ -19,6 +19,9 @@ var CompositeComponent = function () {
     _classCallCheck(this, CompositeComponent);
 
     this.currentElement = element;
+    // internal instance of rendered component, see mount();
+    // eg: const App = ()=> <Foo />; 
+    // then appInternalInstance.renderedComponent will be fooInternalInstance
     this.renderedComponent = null;
     this.publicInstance = null;
   }
@@ -31,6 +34,7 @@ var CompositeComponent = function () {
   }, {
     key: 'getHostNode',
     value: function getHostNode() {
+      // recursively get host node
       return this.renderedComponent.getHostNode();
     }
   }, {
@@ -39,10 +43,12 @@ var CompositeComponent = function () {
       var type = nextElement.type,
           nextProps = nextElement.props;
 
+      // save previous renderedComponent and element
 
       var previousComponent = this.renderedComponent;
       var previousRenderedElement = previousComponent.currentElement;
 
+      // get next rendered element
       var nextRenderedElement = void 0;
       if (isReactClass(type)) {
         var componentWillUpdate = this.publicInstance.componentWillUpdate;
@@ -58,15 +64,23 @@ var CompositeComponent = function () {
         nextRenderedElement = type(nextProps);
       }
 
+      // next element type might be different from previous
+      // eg: const App = ({areYouOk})=> areYouOk ? <Congratulations /> : <GoodLuck />
+      // if type not changed, just call receive on previous renderedComponent
       if (nextRenderedElement.type === previousRenderedElement.type) {
         previousComponent.receive(nextRenderedElement);
       } else {
+        // otherwise, re-create renderedComponent instance 
         this.renderedComponent = instantiateComponent(nextRenderedElement);
+
+        // get dom node of rendered tree
         var nextHostNode = this.renderedComponent.mount();
 
         var previousHostNode = previousComponent.getHostNode();
+
         previousComponent.unmount();
 
+        // replace dom node
         previousHostNode.parentNode.replaceChild(nextHostNode, previousHostNode);
       }
     }
@@ -79,31 +93,42 @@ var CompositeComponent = function () {
 
       var renderedElement = void 0;
 
+      // es6 class
       if (isReactClass(type)) {
+        // create public instance
         this.publicInstance = new type(props);
+        // record internal instance
         this.publicInstance._reactInternalInstance = this;
 
         var componentWillMount = this.publicInstance.componentWillMount;
 
+        // call componentWillMount life-cycle method if exist
 
         if (typeof componentWillMount === 'function') {
           componentWillMount.call(this.publicInstance);
         }
 
+        // get renderedElement by call render method
         renderedElement = this.publicInstance.render();
       } else {
+        // function component
         renderedElement = type(props);
       }
 
+      // * recursivly instatiate renderedElement and mount
+      // since it could only be DOM node in the leaf of component tree
+      // so the return value of recursive mount method will be DOM node.
       this.renderedComponent = instantiateComponent(renderedElement);
       return this.renderedComponent.mount();
     }
   }, {
     key: 'unmount',
     value: function unmount() {
+      // call componentWillUnmount life-cycle if exist
       if (this.publicInstance && this.publicInstance.componentWillUnmount) {
         this.publicInstance.componentWillUnmount();
       }
+
       this.renderedComponent.unmount();
     }
   }]);
@@ -140,12 +165,14 @@ var DOMComponent = function () {
 
       this.currentElement = nextElement;
 
+      // remove old attrs
       Object.keys(previousProps).forEach(function (prop) {
-        if (prop !== 'children' && previousProps.hasOwnProperty(prop)) {
+        if (prop !== 'children' && !nextProps.hasOwnProperty(prop)) {
           node.removeAttribute(prop);
         }
       });
 
+      // set next attrs
       Object.keys(nextProps).forEach(function (prop) {
         if (prop !== 'children' && previousProps.hasOwnProperty(prop)) {
           node.setAttribute(prop, nextProps[prop]);
@@ -160,28 +187,36 @@ var DOMComponent = function () {
 
       nextChildrenElements.forEach(function (nextChildElement, index) {
         var preChildElement = preChildrenElements[index];
+
+        // replace child node if previous child is text node or type not match
         var needReplace = checkTextNodeElement(preChildElement) || nextChildElement.type !== preChildElement.type;
         if (!preChildElement) {
-          //append new
+          //append new if previous child not exist
           var nextChildComponent = instantiateComponent(nextChildElement);
           nextRenderedChildren.push(nextChildComponent);
           node.appendChild(nextChildComponent.mount());
         } else if (needReplace) {
-          //replace
+          // do replace if need
           var _nextChildComponent = instantiateComponent(nextChildElement);
           nextRenderedChildren.push(_nextChildComponent);
           node.replaceChild(_nextChildComponent.mount(), previousRenderedChildren[index].getHostNode());
         } else {
-          // recursive update
+          // update if child type is not text node and not changed 
           var previousRenderedComponent = previousRenderedChildren[index];
           nextRenderedChildren.push(previousRenderedComponent);
+
+          // call receive on renderedComponent to update recursively
           previousRenderedComponent.receive(nextChildElement);
         }
       });
 
+      // unmount & remove extra child that don't exist
       preChildrenElements.forEach(function (previousChildElement, index) {
         if (!nextChildrenElements[index]) {
-          node.removeChild(previousRenderedChildren[index].getHostNode());
+          var previousRenderedComponent = previousRenderedChildren[index];
+          previousRenderedComponent.unmount();
+
+          node.removeChild(previousRenderedComponent.getHostNode());
         }
       });
 
@@ -195,27 +230,36 @@ var DOMComponent = function () {
       var element = this.currentElement;
       var isTextNodeElement = checkTextNodeElement(element);
       var node = void 0;
+
       if (isTextNodeElement) {
         node = document.createTextNode(element);
       } else {
-        (function () {
-          var type = element.type,
-              _element$props = element.props,
-              children = _element$props.children,
-              attributes = _objectWithoutProperties(_element$props, ['children']);
+        var type = element.type,
+            _element$props = element.props,
+            children = _element$props.children,
+            attributes = _objectWithoutProperties(_element$props, ['children']);
 
-          node = document.createElement(type);
+        // create dom node by tag
 
-          Object.keys(attributes).forEach(function (k) {
-            node.setAttribute(k, attributes[k]);
-          });
 
-          children.forEach(function (child) {
-            var childComponent = instantiateComponent(child);
-            _this.renderedChildren.push(childComponent);
-            node.appendChild(childComponent.mount());
-          });
-        })();
+        node = document.createElement(type);
+
+        // set attributes of dom node
+        Object.keys(attributes).forEach(function (k) {
+          node.setAttribute(k, attributes[k]);
+        });
+
+        // tag without children like <input/> is not supported yet
+        // recursively create instance for childrens
+        // CompositeComponent have only one child -- the component it **renders**: const Parent = ()=> <Child />
+        // but HostComponent(DOMComponent) can have multiple children -- the components it **contains**: const App = ()=> <div><A/><B/><C/></div>
+        children.forEach(function (child) {
+          var childComponent = instantiateComponent(child);
+          _this.renderedChildren.push(childComponent);
+
+          // call mount to get dom node of child component recursively then append as child node
+          node.appendChild(childComponent.mount());
+        });
       }
 
       this.node = node;
@@ -241,6 +285,7 @@ function isCompositeElement(element) {
   return (typeof element === 'undefined' ? 'undefined' : _typeof(element)) === 'object' && typeof element.type === 'function';
 }
 
+// create internal instance of element
 function instantiateComponent(element) {
   return isCompositeElement(element) ? new CompositeComponent(element) : new DOMComponent(element);
 }
@@ -288,16 +333,26 @@ window.React = {
 
 window.ReactDOM = {
   render: function render(element, container) {
+    // Update if already mounted
     if (container.firstChild) {
       var instance = container.firstChild._internalInstance;
       instance.receive(element);
       return;
     }
 
+    // create component internal instance
     var rootComponent = instantiateComponent(element);
+
+    // create dom node tree
     var node = rootComponent.mount();
+
+    // recored internalInstance on node so we can check & update the dom tree on re-render
     node._internalInstance = rootComponent;
+
+    // append the dom tree to container
     container.appendChild(node);
+
+    // get public instance see CompositeComponent & DOMComponent
     return rootComponent.getPublicInstance();
   },
   unmountComponentAtNode: function unmountComponentAtNode(container) {
@@ -306,3 +361,5 @@ window.ReactDOM = {
     container.innerHTML = '';
   }
 };
+
+//# sourceMappingURL=index.js.map
